@@ -109,7 +109,8 @@ class OverrideFolderManager(object):
         """
         make sure we don't write out any full urls.
         filepath will be something like foo/bar.css
-        and the full real url will be something like http://site-url/++plone++foo/bar.css
+        and the full real url will be something like
+        http://site-url/++plone++foo/bar.css
 
         So we'll be everything relative the resource path.
 
@@ -182,9 +183,12 @@ class ResourceRegistryControlPanelView(RequireJsView):
         else:
             if RESOURCE_DEVELOPMENT_MODE:
                 messages = IStatusMessage(self.request)
-                messages.add(u"The FEDEV environment variable is set. No matter "
-                             u"what settings are done here, all bundles will "
-                             u"always be in development mode.", type=u"warn")
+                messages.add(
+                    u"The FEDEV environment variable is set. No matter "
+                    u"what settings are done here, all bundles will "
+                    u"always be in development mode.",
+                    type=u"warn"
+                )
             return self.index()
 
     @property
