@@ -33,6 +33,13 @@
       />
 
   <browser:page
+      for="plone.app.layout.navigation.interfaces.INavigationRoot"
+      name="plone-export-registry"
+      class=".registryexporter.RegistryExporterView"
+      permission="cmf.ManagePortal"
+      />
+
+  <browser:page
       for="OFS.interfaces.IApplication"
       name="plone-overview"
       class=".admin.Overview"
