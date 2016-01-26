@@ -241,27 +241,16 @@ class InstallerView(BrowserView):
         )
 
     def upgrade_product(self, product_id):
-        messages = IStatusMessage(self.request)
+        """Run the upgrade steps for a product.
+
+        Returns True on success, False otherwise.
+        """
         profile = self.get_install_profile(product_id)
         if profile is None:
             logger.error("Could not upgrade %s, no profile.", product_id)
-            messages.addStatusMessage(
-                _(u'Error upgrading ${product}.',
-                  mapping={'product': product_id}), type="error")
             return False
-        try:
-            self.ps.upgradeProfile(profile['id'])
-            messages.addStatusMessage(
-                _(u'Upgraded ${product}!', mapping={'product': product_id}),
-                type="info")
-            return True
-        except Exception, e:
-            logger.error("Could not upgrade %s: %s" % (product_id, e))
-            messages.addStatusMessage(
-                _(u'Error upgrading ${product}.',
-                  mapping={'product': product_id}), type="error")
-
-        return False
+        self.ps.upgradeProfile(profile['id'])
+        return True
 
     def install_product(self, product_id, omit_snapshots=True,
                         blacklisted_steps=None):
@@ -271,6 +260,8 @@ class InstallerView(BrowserView):
 
         TODO Probably fine to remove the omit_snapshots and
         blacklisted_steps keyword arguments.
+
+        Returns True on success, False otherwise.
         """
         profile = self.get_install_profile(product_id)
         if not profile:
@@ -306,24 +297,23 @@ class InstallerView(BrowserView):
 
     def uninstall_product(self, product_id):
         """Uninstall a product by name.
+
+        Returns True on success, False otherwise.
         """
-        messages = IStatusMessage(self.request)
         profile = self.get_uninstall_profile(product_id)
         if not profile:
             logger.error("Could not uninstall %s: no uninstall profile "
                          "found.", product_id)
-            messages.addStatusMessage(
-                _(u'Error upgrading ${product}.',
-                  mapping={'product': product_id}), type="error")
-            # TODO Possibly raise an error.
             return False
 
         self.ps.runAllImportStepsFromProfile(
             'profile-%s' % profile['id'])
 
+        # Unmark the install profile.
         install_profile = self.get_install_profile(product_id)
         if install_profile:
             self.ps.unsetLastVersionForProfile(profile['id'])
+        return True
 
 
 class ManageProductsView(InstallerView):
@@ -488,11 +478,19 @@ class UpgradeProductsView(InstallerView):
     def __call__(self):
         products = self.request.get('prefs_reinstallProducts', None)
         if products:
-            for product in products:
-                # TODO: exceptions are caught and the next product is handled.
-                # I would expect that exceptions are raised instead.
-                # This is already in Plone 5.0.
-                self.upgrade_product(product)
+            messages = IStatusMessage(self.request)
+            for product_id in products:
+                result = self.upgrade_product(product_id)
+                if not result:
+                    messages.addStatusMessage(
+                        _(u'Error upgrading ${product}.',
+                          mapping={'product': product_id}), type="error")
+                    # Abort changes for all upgrades.
+                    transaction.abort()
+                    break
+            else:
+                messages.addStatusMessage(
+                    _(u'Upgraded products.'), type="info")
 
         purl = getToolByName(self.context, 'portal_url')()
         self.request.response.redirect(purl + '/prefs_install_products_form')
@@ -501,30 +499,22 @@ class UpgradeProductsView(InstallerView):
 class InstallProductsView(InstallerView):
 
     def __call__(self):
-        products = self.request.get('install_products')
-        if products:
-            successes = []
+        product_id = self.request.get('install_product')
+        if product_id:
             messages = IStatusMessage(self.request)
-            for product_id in products:
-                result = self.install_product(product_id)
-                if result:
-                    successes.append(product_id)
-                else:
-                    # Abort changes for all products.
-                    transaction.abort()
-                    # Only reason should be that between loading the page and
-                    # clicking to install a product, another user has already
-                    # installed this product.
-                    msg = _(u'Failed to install ${product}.',
-                            mapping={'product': product_id})
-                    messages.addStatusMessage(msg, type='error')
-                    break
+            msg_type = 'info'
+            result = self.install_product(product_id)
+            if result:
+                msg = _(u'Installed ${product}!',
+                        mapping={'product': product_id})
             else:
-                # We have reached the end of the products without error.
-                msg = _(u'Installed ${products}.',
-                        mapping={'products':
-                                 ', '.join([pid for pid in successes])})
-                messages.addStatusMessage(msg, type='info')
+                # Only reason should be that between loading the page and
+                # clicking to install a product, another user has already
+                # installed this product.
+                msg_type = 'error'
+                msg = _(u'Failed to install ${product}.',
+                        mapping={'product': product_id})
+            messages.addStatusMessage(msg, type=msg_type)
 
         purl = getToolByName(self.context, 'portal_url')()
         self.request.response.redirect(purl + '/prefs_install_products_form')
@@ -533,28 +523,22 @@ class InstallProductsView(InstallerView):
 class UninstallProductsView(InstallerView):
 
     def __call__(self):
-        products = self.request.get('uninstall_products')
-        if products:
+        product_id = self.request.get('uninstall_product')
+        if product_id:
             messages = IStatusMessage(self.request)
-            # 1 at a time for better error messages
-            for product_id in products:
-                msg_type = 'info'
-                try:
-                    result = self.uninstall_product(product_id)
-                except Exception, e:
-                    logger.error("Could not uninstall %s: %s", product_id, e)
-                    msg_type = 'error'
-                    msg = _(u'Error uninstalling ${product}.', mapping={
-                            'product': product_id})
-                else:
-                    if result:
-                        msg = _(u'Uninstalled ${product}.',
-                                mapping={'product': product_id})
-                    else:
-                        # We already gave an error.  TODO Maybe abort the
-                        # transaction.
-                        break
-                messages.addStatusMessage(msg, type=msg_type)
+            msg_type = 'info'
+            try:
+                result = self.uninstall_product(product_id)
+            except Exception, e:
+                logger.error("Could not uninstall %s: %s", product_id, e)
+                msg_type = 'error'
+                msg = _(u'Error uninstalling ${product}.', mapping={
+                        'product': product_id})
+            else:
+                if result:
+                    msg = _(u'Uninstalled ${product}.',
+                            mapping={'product': product_id})
+            messages.addStatusMessage(msg, type=msg_type)
 
         purl = getToolByName(self.context, 'portal_url')()
         self.request.response.redirect(purl + '/prefs_install_products_form')

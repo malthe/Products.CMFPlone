@@ -126,7 +126,7 @@
               <tal:product define="pid product/id">
                 <form action="install_products" method="post" class="pull-right">
                    <input type="hidden"
-                           name="install_products:list"
+                           name="install_product"
                            tal:attributes="value pid;" />
                    <input class="context"
                            type="submit"
@@ -167,7 +167,7 @@
                 <tal:product define="pid product/id">
                   <form action="uninstall_products" method="post" class="pull-right">
                     <input type="hidden"
-                          name="uninstall_products:list"
+                          name="uninstall_product"
                           tal:attributes="value pid;" />
                     <input class="destructive"
                            type="submit"
