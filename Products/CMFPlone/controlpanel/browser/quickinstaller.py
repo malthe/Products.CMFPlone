@@ -9,6 +9,7 @@ from plone.memoize import view
 from zope.component import getAllUtilitiesRegisteredFor
 import logging
 import pkg_resources
+import transaction
 
 logger = logging.getLogger('Plone')
 
@@ -241,7 +242,7 @@ class InstallerView(BrowserView):
 
     def upgrade_product(self, product_id):
         messages = IStatusMessage(self.request)
-        profile = self.getInstallProfile(product_id)
+        profile = self.get_install_profile(product_id)
         if profile is None:
             logger.error("Could not upgrade %s, no profile.", product_id)
             messages.addStatusMessage(
@@ -271,22 +272,15 @@ class InstallerView(BrowserView):
         TODO Probably fine to remove the omit_snapshots and
         blacklisted_steps keyword arguments.
         """
-        messages = IStatusMessage(self.request)
         profile = self.get_install_profile(product_id)
         if not profile:
             logger.error("Could not install %s: no profile found.", product_id)
-            messages.addStatusMessage(
-                _(u'Error upgrading ${product}.',
-                  mapping={'product': product_id}), type="error")
             # TODO Possibly raise an error.
             return False
 
         if self.is_product_installed(product_id):
-            messages.addStatusMessage(
-                _(u'Error installing ${product}. '
-                  'This product is already installed, '
-                  'please uninstall before reinstalling it.',
-                  mapping={'product': product_id}), type="error")
+            logger.error("Could not install %s: profile already installed.",
+                         product_id)
             return False
 
         # Create a snapshot before installation.  Note: this has nothing to do
@@ -296,7 +290,7 @@ class InstallerView(BrowserView):
                 'qi-before-%s' % product_id)
             self.ps.createSnapshot(before_id)
 
-        profile = self.get_install_profile(product_id)
+        # Okay, actually install the profile.
         self.ps.runAllImportStepsFromProfile(
             'profile-%s' % profile['id'],
             blacklisted_steps=blacklisted_steps)
@@ -306,6 +300,9 @@ class InstallerView(BrowserView):
             after_id = self.ps._mangleTimestampName(
                 'qi-after-%s' % product_id)
             self.ps.createSnapshot(after_id)
+
+        # No problems encountered.
+        return True
 
     def uninstall_product(self, product_id):
         """Uninstall a product by name.
@@ -506,11 +503,27 @@ class InstallProductsView(InstallerView):
     def __call__(self):
         products = self.request.get('install_products')
         if products:
+            successes = []
             messages = IStatusMessage(self.request)
             for product_id in products:
-                self.install_product(product_id)
-                msg = _(u'Installed ${product}!',
-                        mapping={'product': product_id})
+                result = self.install_product(product_id)
+                if result:
+                    successes.append(product_id)
+                else:
+                    # Abort changes for all products.
+                    transaction.abort()
+                    # Only reason should be that between loading the page and
+                    # clicking to install a product, another user has already
+                    # installed this product.
+                    msg = _(u'Failed to install ${product}.',
+                            mapping={'product': product_id})
+                    messages.addStatusMessage(msg, type='error')
+                    break
+            else:
+                # We have reached the end of the products without error.
+                msg = _(u'Installed ${products}.',
+                        mapping={'products':
+                                 ', '.join([pid for pid in successes])})
                 messages.addStatusMessage(msg, type='info')
 
         purl = getToolByName(self.context, 'portal_url')()
