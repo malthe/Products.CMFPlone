@@ -46,12 +46,36 @@ or::
 
 New code::
 
+    from Products.CMFPlone.utils import get_installer
+    qi = get_installer(self.context, self.request)
+
+or if you do not have a request::
+
+    qi = get_installer(self.context)
+
+Alternative code::
+
     qi = getMultiAdapter((self.context, self.request), name='installer')
+
+If you need it in a page template::
+
+    tal:define="qi context/@@installer"
 
 Warning:
 since the code really does different things than before,
 the method names were changed
-and they may accept less or differently named arguments.
+and they may accept less arguments or differently named arguments.
+
+isProductInstalled
+~~~~~~~~~~~~~~~~~~
+
+Old code::
+
+    qi.isProductInstalled(product_name)
+
+New code::
+
+    qi.is_product_installed(product_name)
 
 
 getLatestUpgradeStep
