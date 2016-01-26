@@ -1,4 +1,5 @@
 from zope.interface import implements
+from zope.component import getMultiAdapter
 from zope.component.interfaces import ObjectEvent
 
 from Products.CMFCore.utils import getToolByName
@@ -26,13 +27,10 @@ def profileImportedEventHandler(event):
         return
     profile_id = profile_id.replace('profile-', '')
     gs = event.tool
-    qi = getToolByName(gs, 'portal_quickinstaller', None)
-    if qi is None:
-        # CMF-only site, or a test run.
-        return
     installed_version = gs.getLastVersionForProfile(profile_id)
     if installed_version == (u'latest',):
-        actual_version = qi.getLatestUpgradeStep(profile_id)
+        qi = getMultiAdapter((gs, gs.REQUEST), name='installer')
+        actual_version = qi.get_latest_upgrade_step(profile_id)
         gs.setLastVersionForProfile(profile_id, actual_version)
 
 

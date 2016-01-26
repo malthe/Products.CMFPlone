@@ -18,6 +18,7 @@ from plone.protect.authenticator import check as checkCSRF
 from plone.protect.interfaces import IDisableCSRFProtection
 from zope.component import adapts
 from zope.component import getAllUtilitiesRegisteredFor
+from zope.component import getMultiAdapter
 from zope.component import getUtility
 from zope.component import queryMultiAdapter
 from zope.component import queryUtility
@@ -292,9 +293,11 @@ class Upgrade(BrowserView):
                 REQUEST=self.request,
                 dry_run=form.get('dry_run', False),
             )
-            qi = getattr(self.context, 'portal_quickinstaller')
-            pac_installed = qi.isProductInstalled('plone.app.contenttypes')
-            pac_installable = qi.isProductInstallable('plone.app.contenttypes')
+            qi = getMultiAdapter(
+                (self.context, self.request), name='installer')
+            pac_installed = qi.is_product_installed('plone.app.contenttypes')
+            pac_installable = qi.is_product_installable(
+                'plone.app.contenttypes')
             advertise_dx_migration = pac_installable and not pac_installed
 
             return self.index(
