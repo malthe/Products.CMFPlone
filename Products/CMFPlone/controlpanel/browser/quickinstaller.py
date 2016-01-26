@@ -174,7 +174,7 @@ class InstallerView(BrowserView):
             dist = pkg_resources.get_distribution(product_id)
             return dist.version
         except pkg_resources.DistributionNotFound:
-            pass
+            return ''
 
         # TODO: check if extra Products check is needed after all.
         # if "." not in product_id:
@@ -225,7 +225,7 @@ class InstallerView(BrowserView):
             profile_version = self.get_latest_upgrade_step(profile_id)
         if profile_version == UNKNOWN:
             # If a profile doesn't have a metadata.xml use the package version.
-            profile_version = str(self.get_product_version(product_id))
+            profile_version = self.get_product_version(product_id)
         installed_profile_version = self.ps.getLastVersionForProfile(
             profile_id)
         # getLastVersionForProfile returns the version as a tuple or unknown.
@@ -282,9 +282,16 @@ class InstallerView(BrowserView):
             self.ps.createSnapshot(before_id)
 
         # Okay, actually install the profile.
+        profile_id = profile['id']
         self.ps.runAllImportStepsFromProfile(
-            'profile-%s' % profile['id'],
+            'profile-%s' % profile_id,
             blacklisted_steps=blacklisted_steps)
+
+        if not self.is_profile_installed(profile_id):
+            version = self.get_product_version(product_id)
+            logger.warn('Profile %s has no metadata.xml version. Falling back '
+                        'to package version %s', profile_id, version)
+            self.ps.setLastVersionForProfile(profile_id, version)
 
         # Create a snapshot after installation
         if not omit_snapshots:
