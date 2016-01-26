@@ -210,11 +210,10 @@
        Maybe we want this as utility instead.  It is intended as
        replacement for any use of the portal_quickinstaller. -->
   <browser:page
-    for="Products.CMFPlone.interfaces.IPloneSiteRoot"
+    for="*"
     name="installer"
-    class=".quickinstaller.ManageProductsView"
+    class=".quickinstaller.InstallerView"
     permission="cmf.ManagePortal"
-    template="quickinstaller.pt"
     />
 
   <browser:page
