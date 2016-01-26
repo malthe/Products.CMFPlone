@@ -7,26 +7,20 @@ from Products.GenericSetup.tool import UNKNOWN
 from Products.statusmessages.interfaces import IStatusMessage
 from plone.memoize import view
 from zope.component import getAllUtilitiesRegisteredFor
-from zope.component import getMultiAdapter
 import logging
 import pkg_resources
 
 logger = logging.getLogger('Plone')
 
 
-class ManageProductsView(BrowserView):
-    """
-    Activate and deactivate products in mass, and without weird
-    permissions issues
+class InstallerView(BrowserView):
+    """View on all contexts for installing and uninstalling products.
     """
 
     def __init__(self, *args, **kwargs):
-        super(ManageProductsView, self).__init__(*args, **kwargs)
+        super(InstallerView, self).__init__(*args, **kwargs)
         self.ps = getToolByName(self.context, 'portal_setup')
         self.errors = {}
-
-    def __call__(self):
-        return self.index()
 
     def is_profile_installed(self, profile_id):
         return self.ps.getLastVersionForProfile(profile_id) != UNKNOWN
@@ -245,6 +239,105 @@ class ManageProductsView(BrowserView):
             newVersion=profile_version,
         )
 
+    def upgrade_product(self, product_id):
+        messages = IStatusMessage(self.request)
+        profile = self.getInstallProfile(product_id)
+        if profile is None:
+            logger.error("Could not upgrade %s, no profile.", product_id)
+            messages.addStatusMessage(
+                _(u'Error upgrading ${product}.',
+                  mapping={'product': product_id}), type="error")
+            return False
+        try:
+            self.ps.upgradeProfile(profile['id'])
+            messages.addStatusMessage(
+                _(u'Upgraded ${product}!', mapping={'product': product_id}),
+                type="info")
+            return True
+        except Exception, e:
+            logger.error("Could not upgrade %s: %s" % (product_id, e))
+            messages.addStatusMessage(
+                _(u'Error upgrading ${product}.',
+                  mapping={'product': product_id}), type="error")
+
+        return False
+
+    def install_product(self, product_id, omit_snapshots=True,
+                        blacklisted_steps=None):
+        """Install a product by name.
+
+        From CMFQuickInstallerTool/QuickInstallerTool.py installProduct
+
+        TODO Probably fine to remove the omit_snapshots and
+        blacklisted_steps keyword arguments.
+        """
+        messages = IStatusMessage(self.request)
+        profile = self.get_install_profile(product_id)
+        if not profile:
+            logger.error("Could not install %s: no profile found.", product_id)
+            messages.addStatusMessage(
+                _(u'Error upgrading ${product}.',
+                  mapping={'product': product_id}), type="error")
+            # TODO Possibly raise an error.
+            return False
+
+        if self.is_product_installed(product_id):
+            messages.addStatusMessage(
+                _(u'Error installing ${product}. '
+                  'This product is already installed, '
+                  'please uninstall before reinstalling it.',
+                  mapping={'product': product_id}), type="error")
+            return False
+
+        # Create a snapshot before installation.  Note: this has nothing to do
+        # with the snapshots that the portal_quickinstaller used to make.
+        if not omit_snapshots:
+            before_id = self.ps._mangleTimestampName(
+                'qi-before-%s' % product_id)
+            self.ps.createSnapshot(before_id)
+
+        profile = self.get_install_profile(product_id)
+        self.ps.runAllImportStepsFromProfile(
+            'profile-%s' % profile['id'],
+            blacklisted_steps=blacklisted_steps)
+
+        # Create a snapshot after installation
+        if not omit_snapshots:
+            after_id = self.ps._mangleTimestampName(
+                'qi-after-%s' % product_id)
+            self.ps.createSnapshot(after_id)
+
+    def uninstall_product(self, product_id):
+        """Uninstall a product by name.
+        """
+        messages = IStatusMessage(self.request)
+        profile = self.get_uninstall_profile(product_id)
+        if not profile:
+            logger.error("Could not uninstall %s: no uninstall profile "
+                         "found.", product_id)
+            messages.addStatusMessage(
+                _(u'Error upgrading ${product}.',
+                  mapping={'product': product_id}), type="error")
+            # TODO Possibly raise an error.
+            return False
+
+        self.ps.runAllImportStepsFromProfile(
+            'profile-%s' % profile['id'])
+
+        install_profile = self.get_install_profile(product_id)
+        if install_profile:
+            self.ps.unsetLastVersionForProfile(profile['id'])
+
+
+class ManageProductsView(InstallerView):
+    """
+    Activate and deactivate products in mass, and without weird
+    permissions issues
+    """
+
+    def __call__(self):
+        return self.index()
+
     @view.memoize
     def marshall_addons(self):
         addons = {}
@@ -389,124 +482,33 @@ class ManageProductsView(BrowserView):
     def get_broken(self):
         return self.get_addons(apply_filter='broken').values()
 
-    def upgrade_product(self, product_id):
-        messages = IStatusMessage(self.request)
-        profile = self.getInstallProfile(product_id)
-        if profile is None:
-            logger.error("Could not upgrade %s, no profile.", product_id)
-            messages.addStatusMessage(
-                _(u'Error upgrading ${product}.',
-                  mapping={'product': product_id}), type="error")
-            return False
-        try:
-            self.ps.upgradeProfile(profile['id'])
-            messages.addStatusMessage(
-                _(u'Upgraded ${product}!', mapping={'product': product_id}),
-                type="info")
-            return True
-        except Exception, e:
-            logger.error("Could not upgrade %s: %s" % (product_id, e))
-            messages.addStatusMessage(
-                _(u'Error upgrading ${product}.',
-                  mapping={'product': product_id}), type="error")
 
-        return False
-
-    def install_product(self, product_id, omit_snapshots=True,
-                        blacklisted_steps=None):
-        """Install a product by name.
-
-        From CMFQuickInstallerTool/QuickInstallerTool.py installProduct
-
-        TODO Probably fine to remove the omit_snapshots and
-        blacklisted_steps keyword arguments.
-        """
-        messages = IStatusMessage(self.request)
-        profile = self.get_install_profile(product_id)
-        if not profile:
-            logger.error("Could not install %s: no profile found.", product_id)
-            messages.addStatusMessage(
-                _(u'Error upgrading ${product}.',
-                  mapping={'product': product_id}), type="error")
-            # TODO Possibly raise an error.
-            return False
-
-        if self.is_product_installed(product_id):
-            messages.addStatusMessage(
-                _(u'Error installing ${product}. '
-                  'This product is already installed, '
-                  'please uninstall before reinstalling it.',
-                  mapping={'product': product_id}), type="error")
-            return False
-
-        # Create a snapshot before installation.  Note: this has nothing to do
-        # with the snapshots that the portal_quickinstaller used to make.
-        if not omit_snapshots:
-            before_id = self.ps._mangleTimestampName(
-                'qi-before-%s' % product_id)
-            self.ps.createSnapshot(before_id)
-
-        profile = self.get_install_profile(product_id)
-        self.ps.runAllImportStepsFromProfile(
-            'profile-%s' % profile['id'],
-            blacklisted_steps=blacklisted_steps)
-
-        # Create a snapshot after installation
-        if not omit_snapshots:
-            after_id = self.ps._mangleTimestampName(
-                'qi-after-%s' % product_id)
-            self.ps.createSnapshot(after_id)
-
-    def uninstall_product(self, product_id):
-        """Uninstall a product by name.
-        """
-        messages = IStatusMessage(self.request)
-        profile = self.get_uninstall_profile(product_id)
-        if not profile:
-            logger.error("Could not uninstall %s: no uninstall profile "
-                         "found.", product_id)
-            messages.addStatusMessage(
-                _(u'Error upgrading ${product}.',
-                  mapping={'product': product_id}), type="error")
-            # TODO Possibly raise an error.
-            return False
-
-        self.ps.runAllImportStepsFromProfile(
-            'profile-%s' % profile['id'])
-
-        install_profile = self.get_install_profile(product_id)
-        if install_profile:
-            self.ps.unsetLastVersionForProfile(profile['id'])
-
-
-class UpgradeProductsView(BrowserView):
+class UpgradeProductsView(InstallerView):
     """
     Upgrade a product... or twenty
     """
 
     def __call__(self):
-        qi = getMultiAdapter((self.context, self.request), name='installer')
         products = self.request.get('prefs_reinstallProducts', None)
         if products:
             for product in products:
                 # TODO: exceptions are caught and the next product is handled.
                 # I would expect that exceptions are raised instead.
                 # This is already in Plone 5.0.
-                qi.upgrade_product(product)
+                self.upgrade_product(product)
 
         purl = getToolByName(self.context, 'portal_url')()
         self.request.response.redirect(purl + '/prefs_install_products_form')
 
 
-class InstallProductsView(BrowserView):
+class InstallProductsView(InstallerView):
 
     def __call__(self):
-        qi = getMultiAdapter((self.context, self.request), name='installer')
         products = self.request.get('install_products')
         if products:
             messages = IStatusMessage(self.request)
             for product_id in products:
-                qi.install_product(product_id)
+                self.install_product(product_id)
                 msg = _(u'Installed ${product}!',
                         mapping={'product': product_id})
                 messages.addStatusMessage(msg, type='info')
@@ -515,10 +517,9 @@ class InstallProductsView(BrowserView):
         self.request.response.redirect(purl + '/prefs_install_products_form')
 
 
-class UninstallProductsView(BrowserView):
+class UninstallProductsView(InstallerView):
 
     def __call__(self):
-        qi = getMultiAdapter((self.context, self.request), name='installer')
         products = self.request.get('uninstall_products')
         if products:
             messages = IStatusMessage(self.request)
@@ -526,7 +527,7 @@ class UninstallProductsView(BrowserView):
             for product_id in products:
                 msg_type = 'info'
                 try:
-                    result = qi.uninstall_product(product_id)
+                    result = self.uninstall_product(product_id)
                 except Exception, e:
                     logger.error("Could not uninstall %s: %s", product_id, e)
                     msg_type = 'error'
