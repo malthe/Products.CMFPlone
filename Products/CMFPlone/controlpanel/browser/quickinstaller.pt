@@ -146,6 +146,11 @@
                     tal:content="product/description">add-on description</tal:span>
                   <em class="discreet"> – (<tal:span tal:content="string:${pid}"> plugin.app.name </tal:span>)</em>
                 </p>
+                <dl class="portalMessage warning"
+                   tal:condition="not:product/uninstall_profile">
+                  <dt i18n:translate="">Warning</dt>
+                  <dd i18n:translate="">This product cannot be uninstalled!</dd>
+                </dl>
               </tal:product>
               </li>
             </ul>
@@ -168,6 +173,7 @@
                            type="submit"
                            value="Uninstall"
                            name="form.submitted"
+                           tal:condition="product/uninstall_profile"
                            i18n:attributes="value"/>
                   </form>
                     <h3>
@@ -181,6 +187,11 @@
                         tal:content="product/description">add-on description</tal:span>
                       <em class="discreet"> – (<tal:span tal:content="string:${pid}"> plugin.app.name </tal:span>)</em>
                     </p>
+                    <dl class="portalMessage info"
+                        tal:condition="not:product/uninstall_profile">
+                      <dt i18n:translate="">Info</dt>
+                      <dd i18n:translate="">This product cannot be uninstalled!</dd>
+                    </dl>
                 </tal:product>
                 </li>
               </ul>
