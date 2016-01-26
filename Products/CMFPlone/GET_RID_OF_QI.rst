@@ -66,6 +66,22 @@ since the code really does different things than before,
 the method names were changed
 and they may accept less arguments or differently named arguments.
 
+
+Products namespace
+~~~~~~~~~~~~~~~~~~
+
+There used to be special handling for the Products namespace.
+Not anymore.
+
+Old code::
+
+    qi.installProduct('CMFPlacefulWorkflow')
+
+New code::
+
+    qi.install_product('Products.CMFPlacefulWorkflow')
+
+
 isProductInstalled
 ~~~~~~~~~~~~~~~~~~
 
@@ -76,6 +92,55 @@ Old code::
 New code::
 
     qi.is_product_installed(product_name)
+
+
+installProduct
+~~~~~~~~~~~~~~
+
+Old code::
+
+    qi.installProduct(product_name)
+
+New code::
+
+    qi.install_product(product_name)
+
+Note that no keyword arguments are accepted.
+We might keep ``omit_snapshots`` and ``blacklisted_steps`` if we really want.
+
+
+installProducts
+~~~~~~~~~~~~~~~
+
+This was removed.
+Iterate over a list of products instead.
+
+
+uninstallProduct
+~~~~~~~~~~~~~~~~
+
+Old code::
+
+    qi.uninstallProduct(product_name)
+
+New code::
+
+    qi.uninstall_product(product_name)
+
+
+uninstallProducts
+~~~~~~~~~~~~~~~~~
+
+This was removed.
+Iterate over a list of products instead.
+
+
+reinstallProducts
+~~~~~~~~~~~~~~~~~
+
+This was removed.
+Reinstalling is usually not a good idea.
+You can uninstall and install if you want.
 
 
 getLatestUpgradeStep
