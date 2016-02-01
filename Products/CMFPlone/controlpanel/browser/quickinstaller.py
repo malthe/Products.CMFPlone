@@ -252,14 +252,15 @@ class InstallerView(BrowserView):
         self.ps.upgradeProfile(profile['id'])
         return True
 
-    def install_product(self, product_id, omit_snapshots=True,
-                        blacklisted_steps=None):
+    def installProduct(self, product_name, **kwargs):
+        """Deprecated install product.
+        """
+        return self.install_product(product_name)
+
+    def install_product(self, product_id):
         """Install a product by name.
 
         From CMFQuickInstallerTool/QuickInstallerTool.py installProduct
-
-        TODO Probably fine to remove the omit_snapshots and
-        blacklisted_steps keyword arguments.
 
         Returns True on success, False otherwise.
         """
@@ -274,30 +275,15 @@ class InstallerView(BrowserView):
                          product_id)
             return False
 
-        # Create a snapshot before installation.  Note: this has nothing to do
-        # with the snapshots that the portal_quickinstaller used to make.
-        if not omit_snapshots:
-            before_id = self.ps._mangleTimestampName(
-                'qi-before-%s' % product_id)
-            self.ps.createSnapshot(before_id)
-
         # Okay, actually install the profile.
         profile_id = profile['id']
-        self.ps.runAllImportStepsFromProfile(
-            'profile-%s' % profile_id,
-            blacklisted_steps=blacklisted_steps)
+        self.ps.runAllImportStepsFromProfile('profile-%s' % profile_id)
 
         if not self.is_profile_installed(profile_id):
             version = self.get_product_version(product_id)
             logger.warn('Profile %s has no metadata.xml version. Falling back '
                         'to package version %s', profile_id, version)
             self.ps.setLastVersionForProfile(profile_id, version)
-
-        # Create a snapshot after installation
-        if not omit_snapshots:
-            after_id = self.ps._mangleTimestampName(
-                'qi-after-%s' % product_id)
-            self.ps.createSnapshot(after_id)
 
         # No problems encountered.
         return True

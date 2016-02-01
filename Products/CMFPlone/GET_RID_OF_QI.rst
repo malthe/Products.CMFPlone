@@ -81,6 +81,9 @@ New code::
 
     qi.install_product('Products.CMFPlacefulWorkflow')
 
+TODO: check what happens with Products that register their profile in
+Python code instead of zcml.  It might be needed for that.
+
 
 isProductInstalled
 ~~~~~~~~~~~~~~~~~~
