@@ -10,6 +10,7 @@ from zope.component import getAllUtilitiesRegisteredFor
 import logging
 import pkg_resources
 import transaction
+import warnings
 
 logger = logging.getLogger('Plone')
 
@@ -31,6 +32,11 @@ class InstallerView(BrowserView):
         if not profile:
             return False
         return self.is_profile_installed(profile['id'])
+
+    def isProductInstalled(self, product_name):
+        warnings.warn('isProductInstalled is deprecated, '
+                      'use is_product_installed instead', DeprecationWarning)
+        return self.is_product_installed(product_name)
 
     def _install_profile_info(self, product_id):
         """List extension profile infos of a given product.
@@ -240,6 +246,11 @@ class InstallerView(BrowserView):
             newVersion=profile_version,
         )
 
+    def upgradeProduct(self, pid):
+        warnings.warn('upgradeProduct is deprecated, '
+                      'use upgrade_product instead', DeprecationWarning)
+        return self.upgrade_product(pid)
+
     def upgrade_product(self, product_id):
         """Run the upgrade steps for a product.
 
@@ -255,6 +266,8 @@ class InstallerView(BrowserView):
     def installProduct(self, product_name, **kwargs):
         """Deprecated install product.
         """
+        warnings.warn('installProduct is deprecated, '
+                      'use install_product instead', DeprecationWarning)
         return self.install_product(product_name)
 
     def install_product(self, product_id):
@@ -287,6 +300,15 @@ class InstallerView(BrowserView):
 
         # No problems encountered.
         return True
+
+    def uninstallProducts(self, products, **kwargs):
+        """Uninstall a list of products.
+        """
+        warnings.warn('uninstallProducts is deprecated, '
+                      'use uninstall_product with a single product instead',
+                      DeprecationWarning)
+        for product_id in products:
+            self.uninstall_product(product_id)
 
     def uninstall_product(self, product_id):
         """Uninstall a product by name.

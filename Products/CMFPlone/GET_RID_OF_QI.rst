@@ -176,6 +176,21 @@ New code::
 The new code works already (Plone 4.3, 5.0).
 
 
+Ideas for Plone 5.0
+-------------------
+
+Add ``get_installer`` function that return the old
+``portal_quickinstaller`` with getToolByName.
+
+- Good: this way you can use ``get_installer`` in all Plone 5 versions
+  (well, starting from 5.0.something).  Use ``get_installer`` and the
+  deprecated methods and it will work in 5.0 and higher.
+
+- Bad: then the availability of ``get_installer`` does not tell you
+  whether you get the old tool or the new view.  If you try to use the
+  new methods, they will fail because they do not exist.
+
+
 TODO in Plone 6
 ---------------
 
