@@ -24,6 +24,14 @@ class InstallerView(BrowserView):
         self.ps = getToolByName(self.context, 'portal_setup')
         self.errors = {}
 
+    def listInstallableProducts(self, skipInstalled=True):
+        warnings.warn('listInstallableProducts is no longer supported.',
+                      DeprecationWarning)
+
+    def listInstalledProducts(self, skipInstalled=True):
+        warnings.warn('listInstalledProducts is no longer supported.',
+                      DeprecationWarning)
+
     def is_profile_installed(self, profile_id):
         return self.ps.getLastVersionForProfile(profile_id) != UNKNOWN
 
@@ -37,6 +45,10 @@ class InstallerView(BrowserView):
         warnings.warn('isProductInstalled is deprecated, '
                       'use is_product_installed instead', DeprecationWarning)
         return self.is_product_installed(product_name)
+
+    def notifyInstalled(self, productname, **kwargs):
+        warnings.warn('notifyInstalled is no longer supported.',
+                      DeprecationWarning)
 
     def _install_profile_info(self, product_id):
         """List extension profile infos of a given product.
@@ -108,6 +120,16 @@ class InstallerView(BrowserView):
         """
         return self._get_profile(product_id, 'default', strict=True)
 
+    def isProductInstallable(self, productname):
+        warnings.warn('isProductInstallable is deprecated, '
+                      'use is_product_installable instead', DeprecationWarning)
+        return self.is_product_installable(productname)
+
+    def isProductAvailable(self, productname):
+        warnings.warn('isProductAvailable is deprecated, '
+                      'use is_product_installable instead', DeprecationWarning)
+        return self.is_product_installable(productname)
+
     def is_product_installable(self, product_id):
         """Does a product have an installation profile?
 
@@ -168,6 +190,18 @@ class InstallerView(BrowserView):
                 )
             return False
         return True
+
+    def getProductFile(self, productname, fname='readme.txt'):
+        warnings.warn('getProductFile is no longer supported.',
+                      DeprecationWarning)
+
+    def getProductReadme(self, productname):
+        warnings.warn('getProductReadme is no longer supported.',
+                      DeprecationWarning)
+
+    def getProductVersion(self, productname):
+        warnings.warn('getProductVersion is deprecated, '
+                      'use get_product_version instead', DeprecationWarning)
 
     def get_product_version(self, product_id):
         """Return the version of the product (package).
@@ -246,6 +280,14 @@ class InstallerView(BrowserView):
             newVersion=profile_version,
         )
 
+    def reinstallProducts(self, products, **kwargs):
+        """Reinstalls a list of products, the main difference to
+        uninstall/install is that it does not remove portal objects
+        created during install (e.g. tools, etc.)
+        """
+        warnings.warn('reinstallProducts is no longer supported.',
+                      DeprecationWarning)
+
     def upgradeProduct(self, pid):
         warnings.warn('upgradeProduct is deprecated, '
                       'use upgrade_product instead', DeprecationWarning)
@@ -263,11 +305,23 @@ class InstallerView(BrowserView):
         self.ps.upgradeProfile(profile['id'])
         return True
 
+    def installProducts(self, products=None, **kwargs):
+        warnings.warn('installProducts is deprecated, '
+                      'use install_product with a single product instead. '
+                      'All keyword arguments are ignored.',
+                      DeprecationWarning)
+        if products is None:
+            products = []
+        for product_id in products:
+            self.install_product(product_id)
+
     def installProduct(self, product_name, **kwargs):
         """Deprecated install product.
         """
         warnings.warn('installProduct is deprecated, '
-                      'use install_product instead', DeprecationWarning)
+                      'use install_product instead. '
+                      'All keyword arguments are ignored.',
+                      DeprecationWarning)
         return self.install_product(product_name)
 
     def install_product(self, product_id):
@@ -301,12 +355,15 @@ class InstallerView(BrowserView):
         # No problems encountered.
         return True
 
-    def uninstallProducts(self, products, **kwargs):
+    def uninstallProducts(self, products=None, **kwargs):
         """Uninstall a list of products.
         """
         warnings.warn('uninstallProducts is deprecated, '
-                      'use uninstall_product with a single product instead',
+                      'use uninstall_product with a single product instead. '
+                      'All keyword arguments are ignored.',
                       DeprecationWarning)
+        if products is None:
+            products = []
         for product_id in products:
             self.uninstall_product(product_id)
 

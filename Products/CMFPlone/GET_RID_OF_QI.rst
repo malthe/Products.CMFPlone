@@ -176,6 +176,46 @@ New code::
 The new code works already (Plone 4.3, 5.0).
 
 
+All deprecated methods
+----------------------
+
+Some methods are no longer supported.  The methods are still there,
+but they do nothing:
+
+- listInstallableProducts
+
+- listInstalledProducts
+
+- getProductFile
+
+- getProductReadme
+
+- notifyInstalled
+
+- reinstallProducts
+
+Some methods have been renamed.  The old method names are kept for
+backwards compatibility.  They do roughly the same as before, but
+there are differences.  And all keyword arguments are ignored.  You
+should switch to the new methods instead:
+
+- isProductInstalled, use is_product_installed instead
+
+- isProductInstallable, use is_product_installable instead
+
+- isProductAvailable, use is_product_installable instead
+
+- getProductVersion, use get_product_version instead
+
+- upgradeProduct, use upgrade_product instead
+
+- installProducts, use install_product with a single product instead
+
+- installProduct, use install_product instead
+
+- uninstallProducts, use uninstall_product with a single product instead.
+
+
 Ideas for Plone 5.0
 -------------------
 
