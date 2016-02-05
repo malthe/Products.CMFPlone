@@ -99,7 +99,7 @@ class InstallerView(BrowserView):
             profile_id_parts = profile_id.split(':')
             if len(profile_id_parts) != 2:
                 logger.error("Profile with id '%s' is invalid." % profile_id)
-            if profile_id[1] == 'default':
+            if profile_id_parts[1] == name:
                 return profile
         if not strict:
             # Return the first profile after all.
@@ -118,7 +118,7 @@ class InstallerView(BrowserView):
 
         Note: not used yet.
         """
-        return self._get_profile(product_id, 'default', strict=True)
+        return self._get_profile(product_id, 'uninstall', strict=True)
 
     def isProductInstallable(self, productname):
         warnings.warn('isProductInstallable is deprecated, '
@@ -598,7 +598,6 @@ class UninstallProductsView(InstallerView):
         product_id = self.request.get('uninstall_product')
         if product_id:
             messages = IStatusMessage(self.request)
-            msg_type = 'info'
             try:
                 result = self.uninstall_product(product_id)
             except Exception, e:
@@ -608,7 +607,12 @@ class UninstallProductsView(InstallerView):
                         'product': product_id})
             else:
                 if result:
+                    msg_type = 'info'
                     msg = _(u'Uninstalled ${product}.',
+                            mapping={'product': product_id})
+                else:
+                    msg_type = 'error'
+                    msg = _(u'Could not uninstall ${product}.',
                             mapping={'product': product_id})
             messages.addStatusMessage(msg, type=msg_type)
 
