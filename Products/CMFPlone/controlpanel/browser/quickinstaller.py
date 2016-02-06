@@ -139,13 +139,13 @@ class InstallerView(BrowserView):
         # TODO Do we still want to blacklist complete products instead of only
         # specific profile ids?
         #
-        # from Products.CMFQuickInstallerTool.interfaces import INonInstallable
-        # not_installable = []
-        # utils = getAllUtilitiesRegisteredFor(INonInstallable)
-        # for util in utils:
-        #     not_installable.extend(util.getNonInstallableProducts())
-        # if product_id in not_installable:
-        #     return False
+        from Products.CMFQuickInstallerTool.interfaces import INonInstallable
+        not_installable = []
+        utils = getAllUtilitiesRegisteredFor(INonInstallable)
+        for util in utils:
+            not_installable.extend(util.getNonInstallableProducts())
+        if product_id in not_installable:
+            return False
 
         profile = self.get_install_profile(product_id)
         if profile is None:

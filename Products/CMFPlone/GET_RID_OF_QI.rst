@@ -250,3 +250,7 @@ In Products.CMFPlone:
 - Remove tests/testQuickInstallerTool.py
 
 - Remove QuickInstallerTool.py
+
+- See what we do with this
+  Products.CMFQuickInstallerTool.interfaces.INonInstallable.  We might
+  stil need it.
