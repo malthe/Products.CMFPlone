@@ -253,4 +253,7 @@ In Products.CMFPlone:
 
 - See what we do with this
   Products.CMFQuickInstallerTool.interfaces.INonInstallable.  We might
-  stil need it.
+  stil need it.   Well, we can combine it with the existing
+  Products.CMFPlone.interfaces.INonInstallable.  This then has
+  getNonInstallableProfiles and getNonInstallableProducts.  But we
+  should not require that both are present: just use getattr.
