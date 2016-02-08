@@ -69,6 +69,7 @@ class NonInstallable(object):
         return [_DEFAULT_PROFILE,
                 _CONTENT_PROFILE,
                 u'Products.Archetypes:Archetypes',
+                u'Products.ATContentTypes:default',
                 u'Products.CMFDiffTool:CMFDiffTool',
                 u'Products.CMFEditions:CMFEditions',
                 u'Products.CMFFormController:CMFFormController',
