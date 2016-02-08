@@ -457,16 +457,6 @@ class ManageProductsView(InstallerView):
                     upgrade_info = self.upgrade_info(product_id)
                 elif not self.is_product_installable(product_id):
                     continue
-
-                if profile_type in product_id:
-                    profile_type = 'default'
-                    # XXX override here so some products that do not
-                    # explicitly say "default" for their install
-                    # profile still work
-                    # I'm not sure this is right but this is a way
-                    # to get CMFPlacefulWorkflow to show up in addons
-                    # If it's safe to rename profiles, we can do that too
-
                 addons[product_id] = {
                     'id': product_id,
                     'title': product_id,
@@ -479,26 +469,26 @@ class ManageProductsView(InstallerView):
                     'upgrade_info': upgrade_info,
                     'profile_type': profile_type,
                 }
-            # At this point, we have basic information of this product, either
-            # from the profile we are currently checking, or a previous
-            # profile.  Get this info and enhance it.
-            product = addons[product_id]
-            if profile_type == 'default':
-                product['title'] = profile['title']
-                product['description'] = profile['description']
-                product['install_profile'] = profile
-                product['profile_type'] = profile_type
-            elif profile_type == 'uninstall':
-                product['uninstall_profile'] = profile
-                if 'profile_type' not in product:
-                    # if this is the only profile installed, it could just be
-                    # an uninstall profile
-                    product['profile_type'] = profile_type
+                # Add info on install and uninstall profile.
+                product = addons[product_id]
+                install_profile = self.get_install_profile(product_id)
+                if install_profile is not None:
+                    product['title'] = install_profile['title']
+                    product['description'] = install_profile['description']
+                    product['install_profile'] = install_profile
+                    product['profile_type'] = 'default'
+                uninstall_profile = self.get_uninstall_profile(product_id)
+                if uninstall_profile is not None:
+                    product['uninstall_profile'] = uninstall_profile
+                    product['profile_type'] = 'uninstall'
+            if profile['id'] in (product['install_profile'],
+                                 product['uninstall_profile']):
+                # Everything has been done.
+                continue
+            elif 'version' in profile:
+                product['upgrade_profiles'][profile['version']] = profile
             else:
-                if 'version' in profile:
-                    product['upgrade_profiles'][profile['version']] = profile
-                else:
-                    product['other_profiles'].append(profile)
+                product['other_profiles'].append(profile)
         return addons
 
     def get_addons(self, apply_filter=None, product_name=None):
