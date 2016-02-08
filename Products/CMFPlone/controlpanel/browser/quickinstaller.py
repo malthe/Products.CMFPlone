@@ -1,6 +1,8 @@
 from Products.CMFCore.utils import getToolByName
 from Products.CMFPlone import PloneMessageFactory as _
 from Products.CMFPlone.interfaces import INonInstallable
+from Products.CMFQuickInstallerTool.interfaces import INonInstallable as \
+    QINonInstallable
 from Products.Five.browser import BrowserView
 from Products.GenericSetup import EXTENSION
 from Products.GenericSetup.tool import UNKNOWN
@@ -136,12 +138,19 @@ class InstallerView(BrowserView):
         From CMFQuickInstallerTool/QuickInstallerTool.py
         isProductInstallable (and the deprecated isProductAvailable)
         """
-        # TODO Do we still want to blacklist complete products instead of only
-        # specific profile ids?
-        #
-        from Products.CMFQuickInstallerTool.interfaces import INonInstallable
         not_installable = []
         utils = getAllUtilitiesRegisteredFor(INonInstallable)
+        for util in utils:
+            gnip = getattr(util, 'getNonInstallableProducts', None)
+            if gnip is None:
+                continue
+            not_installable.extend(gnip())
+        if product_id in not_installable:
+            return False
+        # BBB.  For backwards compatibility, we try the INonInstallable from
+        # the old QI as well.
+        not_installable = []
+        utils = getAllUtilitiesRegisteredFor(QINonInstallable)
         for util in utils:
             not_installable.extend(util.getNonInstallableProducts())
         if product_id in not_installable:
@@ -404,7 +413,10 @@ class ManageProductsView(InstallerView):
         ignore_profiles = []
         utils = getAllUtilitiesRegisteredFor(INonInstallable)
         for util in utils:
-            ignore_profiles.extend(util.getNonInstallableProfiles())
+            gnip = getattr(util, 'getNonInstallableProfiles', None)
+            if gnip is None:
+                continue
+            ignore_profiles.extend(gnip())
 
         # Known profiles:
         profiles = self.ps.listProfileInfo()

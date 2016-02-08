@@ -216,6 +216,44 @@ should switch to the new methods instead:
 - uninstallProducts, use uninstall_product with a single product instead.
 
 
+INonInstallable
+---------------
+
+There used to be an INonInstallable interface in CMFPlone (for hiding
+profiles) and one in CMFQuickInstallerTool (for hiding products).  In
+the new situation, these are combined in the one from CMFPlone.
+
+Sample usage:
+
+In configure.zcml::
+
+  <utility factory=".setuphandlers.NonInstallable"
+           name="your.package" />
+
+In setuphandlers.py::
+
+  from Products.CMFPlone.interfaces import INonInstallable
+  from zope.interface import implements
+
+  class NonInstallable(object):
+      implements(INonInstallable)
+
+      def getNonInstallableProducts(self):
+          # This used to be CMFQuickInstallerTool.
+          # Make sure this package does not show up in the add-ons
+          # control panel:
+          return ['collective.hidden.package']
+
+      def getNonInstallableProfiles(self):
+          # This already was in CMFPlone.
+          # Hide the base profile from your.package from the list
+          # shown at site creation.
+          return ['your.package:base']
+
+When you do not need them both, you can let the other return an empty
+list, or you can leave that method out completely.
+
+
 Ideas for Plone 5.0
 -------------------
 
@@ -250,10 +288,3 @@ In Products.CMFPlone:
 - Remove tests/testQuickInstallerTool.py
 
 - Remove QuickInstallerTool.py
-
-- See what we do with this
-  Products.CMFQuickInstallerTool.interfaces.INonInstallable.  We might
-  stil need it.   Well, we can combine it with the existing
-  Products.CMFPlone.interfaces.INonInstallable.  This then has
-  getNonInstallableProfiles and getNonInstallableProducts.  But we
-  should not require that both are present: just use getattr.
