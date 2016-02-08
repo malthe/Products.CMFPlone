@@ -95,17 +95,30 @@ class InstallerView(BrowserView):
         profiles = self._install_profile_info(product_id)
         if not profiles:
             return
+        utils = getAllUtilitiesRegisteredFor(INonInstallable)
+        hidden = []
+        for util in utils:
+            gnip = getattr(util, 'getNonInstallableProfiles', None)
+            if gnip is None:
+                continue
+            hidden.extend(gnip())
+
         # QI used to pick the first profile.
+        candidates = []
         for profile in profiles:
             profile_id = profile['id']
+            if profile_id in hidden:
+                continue
             profile_id_parts = profile_id.split(':')
             if len(profile_id_parts) != 2:
                 logger.error("Profile with id '%s' is invalid." % profile_id)
+                continue
             if profile_id_parts[1] == name:
                 return profile
-        if not strict:
+            candidates.append(profile)
+        if not strict and candidates:
             # Return the first profile after all.
-            return profiles[0]
+            return candidates[0]
 
     def get_install_profile(self, product_id):
         """Return the default install profile.
