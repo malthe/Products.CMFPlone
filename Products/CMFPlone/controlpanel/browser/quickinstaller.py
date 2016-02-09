@@ -38,7 +38,7 @@ class InstallerView(BrowserView):
         return self.ps.getLastVersionForProfile(profile_id) != UNKNOWN
 
     def is_product_installed(self, product_id):
-        profile = self.get_install_profile(product_id)
+        profile = self.get_install_profile(product_id, allow_hidden=True)
         if not profile:
             return False
         return self.is_profile_installed(profile['id'])
@@ -80,17 +80,28 @@ class InstallerView(BrowserView):
         """
         return [prof['id'] for prof in self._install_profile_info(product_id)]
 
-    def _get_profile(self, product_id, name, strict=True):
+    def _get_profile(self, product_id, name, strict=True, allow_hidden=False):
         """Return profile with given name.
 
         Also return None when no profiles are found at all.
 
-        @product_id: For example CMFPlone or plone.app.registry.
-
-        @name: usually 'default' or 'uninstall'.
-
-        @strict: return None when name is not found.  Otherwise fall
-        back to the first profile.
+        :param product_id: id of product/package.
+            For example CMFPlone or plone.app.registry.
+        :type product_id: string
+        :param name: name of profile.
+            Usually 'default' or 'uninstall'.
+        :type name: string
+        :param strict: When True, return None when name is not found.
+            Otherwise fall back to the first profile.
+        :type strict: boolean
+        :param allow_hidden: Allow installing otherwise hidden products.
+            In the UI this will be False, but you can set it to True in
+            for example a call from plone.app.upgrade where you want to
+            install a new core product, even though it is hidden for users.
+            A non hidden profile is always preferred.
+        :type allow_hidden: boolean
+        :returns: True on success, False otherwise.
+        :rtype: boolean
         """
         profiles = self._install_profile_info(product_id)
         if not profiles:
@@ -103,30 +114,50 @@ class InstallerView(BrowserView):
                 continue
             hidden.extend(gnip())
 
-        # QI used to pick the first profile.
-        candidates = []
+        # We have prime candidates that we prefer, and have hidden candidates
+        # in case allow_hidden is True.
+        prime_candidates = []
+        hidden_candidates = []
         for profile in profiles:
             profile_id = profile['id']
-            if profile_id in hidden:
-                continue
             profile_id_parts = profile_id.split(':')
             if len(profile_id_parts) != 2:
                 logger.error("Profile with id '%s' is invalid." % profile_id)
                 continue
+            if profile_id in hidden:
+                hidden_candidates.append(profile)
+                continue
             if profile_id_parts[1] == name:
                 return profile
-            candidates.append(profile)
-        if not strict and candidates:
+            prime_candidates.append(profile)
+        if strict:
+            return
+        if prime_candidates:
+            # QI used to pick the first profile.
             # Return the first profile after all.
-            return candidates[0]
+            return prime_candidates[0]
+        if allow_hidden and hidden_candidates:
+            # Return the first hidden profile.
+            return hidden_candidates[0]
 
-    def get_install_profile(self, product_id):
+    def get_install_profile(self, product_id, allow_hidden=False):
         """Return the default install profile.
 
         From CMFQuickInstallerTool/QuickInstallerTool.py
         getInstallProfile
+
+        :param product_id: id of product/package
+        :type product_id: string
+        :param allow_hidden: Allow getting otherwise hidden profile.
+            In the UI this will be False, but you can set it to True in
+            for example a call from plone.app.upgrade where you want to
+            install a new core product, even though it is hidden for users.
+        :type allow_hidden: boolean
+        :returns: True on success, False otherwise.
+        :rtype: boolean
         """
-        return self._get_profile(product_id, 'default', strict=False)
+        return self._get_profile(product_id, 'default', strict=False,
+                                 allow_hidden=allow_hidden)
 
     def get_uninstall_profile(self, product_id):
         """Return the uninstall profile.
@@ -145,31 +176,41 @@ class InstallerView(BrowserView):
                       'use is_product_installable instead', DeprecationWarning)
         return self.is_product_installable(productname)
 
-    def is_product_installable(self, product_id):
+    def is_product_installable(self, product_id, allow_hidden=False):
         """Does a product have an installation profile?
 
         From CMFQuickInstallerTool/QuickInstallerTool.py
         isProductInstallable (and the deprecated isProductAvailable)
-        """
-        not_installable = []
-        utils = getAllUtilitiesRegisteredFor(INonInstallable)
-        for util in utils:
-            gnip = getattr(util, 'getNonInstallableProducts', None)
-            if gnip is None:
-                continue
-            not_installable.extend(gnip())
-        if product_id in not_installable:
-            return False
-        # BBB.  For backwards compatibility, we try the INonInstallable from
-        # the old QI as well.
-        not_installable = []
-        utils = getAllUtilitiesRegisteredFor(QINonInstallable)
-        for util in utils:
-            not_installable.extend(util.getNonInstallableProducts())
-        if product_id in not_installable:
-            return False
 
-        profile = self.get_install_profile(product_id)
+        :param allow_hidden: Allow installing otherwise hidden products.
+            In the UI this will be False, but you can set it to True in
+            for example a call from plone.app.upgrade where you want to
+            install a new core product, even though it is hidden for users.
+        :type allow_hidden: boolean
+        :returns: True when product is installable, False otherwise.
+        :rtype: boolean
+        """
+        if not allow_hidden:
+            not_installable = []
+            utils = getAllUtilitiesRegisteredFor(INonInstallable)
+            for util in utils:
+                gnip = getattr(util, 'getNonInstallableProducts', None)
+                if gnip is None:
+                    continue
+                not_installable.extend(gnip())
+            if product_id in not_installable:
+                return False
+            # BBB.  For backwards compatibility, we try the INonInstallable
+            # from the old QI as well.
+            not_installable = []
+            utils = getAllUtilitiesRegisteredFor(QINonInstallable)
+            for util in utils:
+                not_installable.extend(util.getNonInstallableProducts())
+            if product_id in not_installable:
+                return False
+
+        profile = self.get_install_profile(
+            product_id, allow_hidden=allow_hidden)
         if profile is None:
             return
         try:
@@ -273,11 +314,16 @@ class InstallerView(BrowserView):
         an upgrade is required and available.
 
         From CMFPlone/QuickInstaller.py upgradeInfo
+
+        :param product_id: id of product/package
+        :type product_id: string
+        :returns: dictionary with info about product
+        :rtype: dict
         """
-        available = self.is_product_installable(product_id)
+        available = self.is_product_installable(product_id, allow_hidden=True)
         if not available:
-            return False
-        profile = self.get_install_profile(product_id)
+            return {}
+        profile = self.get_install_profile(product_id, allow_hidden=True)
         if profile is None:
             # No GS profile, not supported.
             return {}
@@ -320,7 +366,7 @@ class InstallerView(BrowserView):
 
         Returns True on success, False otherwise.
         """
-        profile = self.get_install_profile(product_id)
+        profile = self.get_install_profile(product_id, allow_hidden=True)
         if profile is None:
             logger.error("Could not upgrade %s, no profile.", product_id)
             return False
@@ -346,14 +392,23 @@ class InstallerView(BrowserView):
                       DeprecationWarning)
         return self.install_product(product_name)
 
-    def install_product(self, product_id):
+    def install_product(self, product_id, allow_hidden=False):
         """Install a product by name.
 
         From CMFQuickInstallerTool/QuickInstallerTool.py installProduct
 
-        Returns True on success, False otherwise.
+        :param product_id: id of product/package
+        :type product_id: string
+        :param allow_hidden: Allow installing otherwise hidden products.
+            In the UI this will be False, but you can set it to True in
+            for example a call from plone.app.upgrade where you want to
+            install a new core product, even though it is hidden for users.
+        :type allow_hidden: boolean
+        :returns: True on success, False otherwise.
+        :rtype: boolean
         """
-        profile = self.get_install_profile(product_id)
+        profile = self.get_install_profile(
+            product_id, allow_hidden=allow_hidden)
         if not profile:
             logger.error("Could not install %s: no profile found.", product_id)
             # TODO Possibly raise an error.
@@ -404,7 +459,8 @@ class InstallerView(BrowserView):
             'profile-%s' % profile['id'])
 
         # Unmark the install profile.
-        install_profile = self.get_install_profile(product_id)
+        install_profile = self.get_install_profile(
+            product_id, allow_hidden=True)
         if install_profile:
             self.ps.unsetLastVersionForProfile(profile['id'])
         return True
@@ -452,7 +508,7 @@ class ManageProductsView(InstallerView):
             if product_id not in addons:
                 # get some basic information on the product
                 installed = self.is_profile_installed(pid)
-                upgrade_info = None
+                upgrade_info = {}
                 if installed:
                     upgrade_info = self.upgrade_info(product_id)
                 elif not self.is_product_installable(product_id):
@@ -529,12 +585,8 @@ class ManageProductsView(InstallerView):
                     if addon['profile_type'] != 'default':
                         continue
                 elif apply_filter == 'upgrades':
-                    # weird p.a.discussion integration behavior
                     upgrade_info = addon['upgrade_info']
-                    if type(upgrade_info) == bool:
-                        continue
-
-                    if not upgrade_info['available']:
+                    if not upgrade_info.get('available'):
                         continue
 
                 filtered[product_id] = addon
