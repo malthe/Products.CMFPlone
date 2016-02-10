@@ -462,7 +462,7 @@ class InstallerView(BrowserView):
         install_profile = self.get_install_profile(
             product_id, allow_hidden=True)
         if install_profile:
-            self.ps.unsetLastVersionForProfile(profile['id'])
+            self.ps.unsetLastVersionForProfile(install_profile['id'])
         return True
 
 
