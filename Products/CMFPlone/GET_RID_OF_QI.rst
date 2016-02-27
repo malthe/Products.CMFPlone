@@ -272,7 +272,33 @@ Add ``get_installer`` function that return the old
 TODO in Plone 5.1
 -----------------
 
-- Make lots of uninstall profiles.
+- Make lots of uninstall profiles.  At least these ones, because they
+  are installable in standard Plone:
+
+  - ATContentTypes
+  - plone.app.multilingual
+  - plone.session
+  - CMFPlacefulWorkflow
+  - plone.app.openid
+  - plone.app.iterate
+
+  Probably these, because they are dependencies of the above:
+
+  - Archetypes (from ATCT)
+  - CMFFormController (from ATCT)
+  - MimetypesRegistry (from Archetypes)
+  - PortalTransforms (from Archetypes)
+
+- Additional idea: before uninstalling, check if the default profile
+  is a dependency of another profile that is currently installed.
+
+- Problem: hidden installed products are no longer hidden.  These are
+  installed by default in Plone and should not show up in the UI as
+  installed:
+
+  - plonetheme.barceloneta
+  - plone.app.caching
+  - plone.app.intid
 
 - In uninstall_product we apply the uninstall profile and unmark the
   default profile.  We could do the last in an event handler, much
