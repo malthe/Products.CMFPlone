@@ -269,10 +269,22 @@ Add ``get_installer`` function that return the old
   new methods, they will fail because they do not exist.
 
 
+TODO in Plone 5.1
+-----------------
+
+- Make lots of uninstall profiles.
+
+- In uninstall_product we apply the uninstall profile and unmark the
+  default profile.  We could do the last in an event handler, much
+  like the old event handler in Products.CMFQuickInstallerTool, so
+  that the default profile is also unmarked when someone manually
+  applies the uninstall profile.
+
+
 TODO in Plone 6
 ---------------
 
-We do want to break everything in Plone 5.x.
+We do not want to break everything in Plone 5.x.
 So CMFQuickInstallerTool must remain,
 even when not used in core.
 But in Plone 6 we intend to remove it.
