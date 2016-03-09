@@ -520,7 +520,9 @@ class ManageProductsView(InstallerView):
                     'upgrade_profiles': {},
                     'other_profiles': [],
                     'install_profile': None,
+                    'install_profile_id': '',
                     'uninstall_profile': None,
+                    'uninstall_profile_id': '',
                     'is_installed': installed,
                     'upgrade_info': upgrade_info,
                     'profile_type': profile_type,
@@ -532,13 +534,17 @@ class ManageProductsView(InstallerView):
                     product['title'] = install_profile['title']
                     product['description'] = install_profile['description']
                     product['install_profile'] = install_profile
+                    product['install_profile_id'] = install_profile['id']
                     product['profile_type'] = 'default'
                 uninstall_profile = self.get_uninstall_profile(product_id)
                 if uninstall_profile is not None:
                     product['uninstall_profile'] = uninstall_profile
-                    product['profile_type'] = 'uninstall'
-            if profile['id'] in (product['install_profile'],
-                                 product['uninstall_profile']):
+                    product['uninstall_profile_id'] = uninstall_profile['id']
+                    # Do not override profile_type.
+                    if not product['profile_type']:
+                        product['profile_type'] = 'uninstall'
+            if profile['id'] in (product['install_profile_id'],
+                                 product['uninstall_profile_id']):
                 # Everything has been done.
                 continue
             elif 'version' in profile:
