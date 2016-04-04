@@ -1,22 +1,22 @@
-import logging
-
-from Products.CMFPlone.interfaces.resources import IResourceRegistry
-from Products.CMFPlone.interfaces.resources import IBundleRegistry
-from Products.CMFPlone.interfaces.resources import OVERRIDE_RESOURCE_DIRECTORY_NAME  # noqa
-from Products.CMFPlone.resources.browser.combine import combine_bundles
-from StringIO import StringIO
+# -*- coding: utf-8 -*-
 from cssmin import cssmin
 from datetime import datetime
 from plone.protect.interfaces import IDisableCSRFProtection
 from plone.registry.interfaces import IRegistry
 from plone.resource.interfaces import IResourceDirectory
 from plone.subrequest import subrequest
+from Products.CMFPlone.interfaces.resources import IBundleRegistry
+from Products.CMFPlone.interfaces.resources import IResourceRegistry
+from Products.CMFPlone.interfaces.resources import OVERRIDE_RESOURCE_DIRECTORY_NAME  # noqa
+from Products.CMFPlone.resources.browser.combine import combine_bundles
 from slimit import minify
+from StringIO import StringIO
+from zExceptions import NotFound
 from zope.component import getUtility
 from zope.component.hooks import getSite
 from zope.globalrequest import getRequest
 from zope.interface import alsoProvides
-from zExceptions import NotFound
+import logging
 
 logger = logging.getLogger('Products.CMFPlone')
 
@@ -37,10 +37,9 @@ def cookWhenChangingSettings(context, bundle=None):
             bundle = bundles.setdefault('plone-legacy')
             bundle.resources = []
 
-
     if not bundle.resources:
-        # you can have a bundle without any resources defined and it's just shipped
-        # as a legacy compiled js file
+        # you can have a bundle without any resources defined and it's just
+        # shipped as a legacy compiled js file
         return
 
     # Let's join all css and js

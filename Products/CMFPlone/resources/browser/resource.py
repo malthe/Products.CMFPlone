@@ -118,11 +118,18 @@ class ResourceView(ViewletBase):
         return self.registry.collectionOfInterface(
             IResourceRegistry, prefix="plone.resources", check=False)
 
+    def get_bundle_resources(self, bundle):
+        resources = self.get_resources()
+        for resource in bundle.resources:
+            if resource in resources:
+                yield resources[resource]
+
     def get_cooked_bundles(self):
         """
         Get the cooked bundles
         """
         cache = component.queryUtility(ram.IRAMCache)
+        do_cache = cache is not None and not self.development
         bundles = self.get_bundles()
 
         enabled_diazo_bundles = []
@@ -145,23 +152,29 @@ class ResourceView(ViewletBase):
             # The diazo manifest and request bundles are more important than
             # the disabled bundle on registry.
             # We can access the site with diazo.off=1 without diazo bundles
-            if (bundle.enabled
-                    or key in enabled_request_bundles
-                    or key in enabled_diazo_bundles) and\
-                    (key not in disabled_diazo_bundles
-                        and key not in disabled_request_bundles):
+            if (
+                (
+                    bundle.enabled or
+                    key in enabled_request_bundles or
+                    key in enabled_diazo_bundles
+                ) and (
+                    key not in disabled_diazo_bundles and
+                    key not in disabled_request_bundles
+                )
+            ):
                 # check expression
                 if bundle.expression:
                     cooked_expression = None
-                    if cache is not None:
+                    if do_cache:
                         cooked_expression = cache.query(
                             'plone.bundles.cooked_expressions',
                             key=dict(prefix=bundle.__prefix__), default=None)
                     if (
-                            cooked_expression is None or
-                            cooked_expression.text != bundle.expression):
+                        cooked_expression is None or
+                        cooked_expression.text != bundle.expression
+                    ):
                         cooked_expression = Expression(bundle.expression)
-                        if cache is not None:
+                        if do_cache:
                             cache.set(
                                 cooked_expression,
                                 'plone.bundles.cooked_expressions',

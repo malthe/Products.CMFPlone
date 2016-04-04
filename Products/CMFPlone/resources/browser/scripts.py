@@ -1,8 +1,9 @@
-from urlparse import urlparse
-from urllib import quote
-
+# -*- coding: utf-8 -*-
+from datetime import datetime
 from Products.CMFPlone.resources.browser.cook import cookWhenChangingSettings
 from Products.CMFPlone.resources.browser.resource import ResourceView
+from urllib import quote
+from urlparse import urlparse
 
 
 class ScriptsView(ResourceView):
@@ -12,35 +13,39 @@ class ScriptsView(ResourceView):
     def get_data(self, bundle, result):
         bundle_name = bundle.__prefix__.split('/', 1)[1].rstrip('.')
         if self.develop_bundle(bundle, 'develop_javascript'):
-            resources = self.get_resources()
-            for resource in bundle.resources:
-                if resource in resources:
-                    script = resources[resource]
-                    if script.js:
-                        url = urlparse(script.js)
-                        if url.netloc == '':
-                            # Local
-                            src = "%s/%s" % (self.site_url, script.js)
-                        else:
-                            src = "%s" % (script.js)
-
-                        data = {
-                            'bundle': bundle_name,
-                            'conditionalcomment': bundle.conditionalcomment,  # noqa
-                            'src': src}
-                        result.append(data)
+            for resource in self.get_bundle_resources(bundle):
+                if not resource.js:
+                    continue
+                url = urlparse(resource.js)
+                src = resource.js
+                if url.netloc == '':
+                    # Local
+                    src = "%s/%s" % (self.site_url, src)
+                data = {
+                    'bundle': bundle_name,
+                    'conditionalcomment': bundle.conditionalcomment,  # noqa
+                    'src': src
+                }
+                result.append(data)
         else:
             if bundle.compile is False:
                 # Its a legacy css bundle OR compiling is happening outside of
                 # plone
-                if ((not bundle.last_compilation
-                        or self.last_legacy_import > bundle.last_compilation)
-                        and bundle.resources):
-                    # We need to combine files. It's possible no resources are defined
-                    # because the compiling is done outside of plone
+                if (
+                    (
+                        not bundle.last_compilation or
+                        self.last_legacy_import > bundle.last_compilation
+                    ) and bundle.resources
+                ):
+                    # We need to combine files. It's possible no resources are
+                    # defined because the compiling is done outside of plone
                     cookWhenChangingSettings(self.context, bundle)
             if bundle.jscompilation:
                 js_path = bundle.jscompilation
+                if self.development:
+                    lastcompilation = quote(str(datetime.now()))
+                else:
+                    lastcompilation = quote(str(bundle.last_compilation))
                 if '++plone++' in js_path:
                     resource_path = js_path.split('++plone++')[-1]
                     resource_name, resource_filepath = resource_path.split(
@@ -48,14 +53,14 @@ class ScriptsView(ResourceView):
                     js_location = '%s/++plone++%s/++unique++%s/%s' % (
                         self.site_url,
                         resource_name,
-                        quote(str(bundle.last_compilation)),
+                        lastcompilation,
                         resource_filepath
                     )
                 else:
                     js_location = '%s/%s?version=%s' % (
                         self.site_url,
                         bundle.jscompilation,
-                        quote(str(bundle.last_compilation))
+                        lastcompilation
                     )
                 result.append({
                     'bundle': bundle_name,

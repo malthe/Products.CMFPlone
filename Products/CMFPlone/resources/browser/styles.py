@@ -1,8 +1,9 @@
-from urlparse import urlparse
-from urllib import quote
-
+# -*- coding: utf-8 -*-
+from datetime import datetime
 from Products.CMFPlone.resources.browser.cook import cookWhenChangingSettings
 from Products.CMFPlone.resources.browser.resource import ResourceView
+from urllib import quote
+from urlparse import urlparse
 
 
 class StylesView(ResourceView):
@@ -45,45 +46,46 @@ class StylesView(ResourceView):
             '/',
             1)[1].rstrip('.') if bundle else 'none'
         if self.develop_bundle(bundle, 'develop_css'):
-            self.resources = self.get_resources()
-            # The bundle resources
-            for resource in bundle.resources:
-                if resource in self.resources:
-                    style = self.resources[resource]
-                    for data in self.get_urls(style, bundle):
-                        result.append(data)
-        else:
-            if bundle.compile is False:
-                # Its a legacy css bundle
-                if not bundle.last_compilation\
-                        or self.last_legacy_import > bundle.last_compilation:
-                    # We need to compile
-                    cookWhenChangingSettings(self.context, bundle)
+            for resource in self.get_bundle_resources(bundle):
+                for data in self.get_urls(resource, bundle):
+                    result.append(data)
+            return
 
-            if bundle.csscompilation:
-                css_path = bundle.csscompilation
-                if '++plone++' in css_path:
-                    resource_path = css_path.split('++plone++')[-1]
-                    resource_name, resource_filepath = resource_path.split(
-                        '/', 1)
-                    css_location = '%s/++plone++%s/++unique++%s/%s' % (
-                        self.site_url,
-                        resource_name,
-                        quote(str(bundle.last_compilation)),
-                        resource_filepath
-                    )
-                else:
-                    css_location = '%s/%s?version=%s' % (
-                        self.site_url,
-                        bundle.csscompilation,
-                        quote(str(bundle.last_compilation))
-                    )
-                result.append({
-                    'bundle': bundle_name,
-                    'rel': 'stylesheet',
-                    'conditionalcomment': bundle.conditionalcomment,
-                    'src': css_location
-                })
+        if bundle.compile is False:
+            # Its a legacy css bundle
+            if not bundle.last_compilation\
+                    or self.last_legacy_import > bundle.last_compilation:
+                # We need to compile
+                cookWhenChangingSettings(self.context, bundle)
+
+        if bundle.csscompilation:
+            if self.development:
+                lastcompilation = quote(str(datetime.now()))
+            else:
+                lastcompilation = quote(str(bundle.last_compilation))
+            css_path = bundle.csscompilation
+            if '++plone++' in css_path:
+                resource_path = css_path.split('++plone++')[-1]
+                resource_name, resource_filepath = resource_path.split(
+                    '/', 1)
+                css_location = '%s/++plone++%s/++unique++%s/%s' % (
+                    self.site_url,
+                    resource_name,
+                    lastcompilation,
+                    resource_filepath,
+                )
+            else:
+                css_location = '%s/%s?version=%s' % (
+                    self.site_url,
+                    bundle.csscompilation,
+                    lastcompilation,
+                )
+            result.append({
+                'bundle': bundle_name,
+                'rel': 'stylesheet',
+                'conditionalcomment': bundle.conditionalcomment,
+                'src': css_location
+            })
 
     def styles(self):
         """
