@@ -285,9 +285,9 @@ TODO in Plone 5.1
   Probably these, because they are dependencies of the above:
 
   - Archetypes (from ATCT)
-  - CMFFormController (from ATCT)
-  - MimetypesRegistry (from Archetypes)
-  - PortalTransforms (from Archetypes)
+  - CMFFormController (from ATCT, but installed by CMFPlone too)
+  - MimetypesRegistry (from Archetypes, but installed by CMFPlone too)
+  - PortalTransforms (from Archetypes, but installed by CMFPlone too)
 
 - Additional idea: before uninstalling, check if the default profile
   is a dependency of another profile that is currently installed.
