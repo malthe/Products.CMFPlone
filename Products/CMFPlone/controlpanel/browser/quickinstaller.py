@@ -94,10 +94,7 @@ class InstallerView(BrowserView):
         :param strict: When True, return None when name is not found.
             Otherwise fall back to the first profile.
         :type strict: boolean
-        :param allow_hidden: Allow installing otherwise hidden products.
-            In the UI this will be False, but you can set it to True in
-            for example a call from plone.app.upgrade where you want to
-            install a new core product, even though it is hidden for users.
+        :param allow_hidden: Allow getting hidden profile.
             A non hidden profile is always preferred.
         :type allow_hidden: boolean
         :returns: True on success, False otherwise.
@@ -480,12 +477,15 @@ class ManageProductsView(InstallerView):
         addons = {}
 
         ignore_profiles = []
+        ignore_products = []
         utils = getAllUtilitiesRegisteredFor(INonInstallable)
         for util in utils:
-            gnip = getattr(util, 'getNonInstallableProfiles', None)
-            if gnip is None:
-                continue
-            ignore_profiles.extend(gnip())
+            ni_profiles = getattr(util, 'getNonInstallableProfiles', None)
+            if ni_profiles is not None:
+                ignore_profiles.extend(ni_profiles())
+            ni_products = getattr(util, 'getNonInstallableProducts', None)
+            if ni_products is not None:
+                ignore_products.extend(ni_products())
 
         # Known profiles:
         profiles = self.ps.listProfileInfo()
@@ -504,6 +504,8 @@ class ManageProductsView(InstallerView):
                 logger.error("Profile with id '%s' is invalid." % pid)
             # Which package (product) is this from?
             product_id = profile['product']
+            if product_id in ignore_products:
+                continue
             profile_type = pid_parts[-1]
             if product_id not in addons:
                 # get some basic information on the product
@@ -558,7 +560,7 @@ class ManageProductsView(InstallerView):
         100% based on generic setup profiles now. Kinda.
         For products magic, use the zope quickinstaller I guess.
 
-        @filter:= 'installed': only products that are installed
+        @filter:= 'installed': only products that are installed and not hidden
                   'upgrades': only products with upgrades
                   'available': products that are not installed bit
                                could be
