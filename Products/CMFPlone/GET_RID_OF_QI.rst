@@ -124,7 +124,7 @@ uninstallProduct
 
 Old code::
 
-    qi.uninstallProduct(product_name)
+    qi.uninstallProducts([product_name])
 
 New code::
 
