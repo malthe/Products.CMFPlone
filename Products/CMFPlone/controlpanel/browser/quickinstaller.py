@@ -121,7 +121,11 @@ class InstallerView(BrowserView):
             if len(profile_id_parts) != 2:
                 logger.error("Profile with id '%s' is invalid." % profile_id)
                 continue
-            if profile_id in hidden:
+            if allow_hidden and profile_id in hidden:
+                if profile_id_parts[1] == name:
+                    # This will especially be true for uninstall profiles,
+                    # which are usually hidden.
+                    return profile
                 hidden_candidates.append(profile)
                 continue
             if profile_id_parts[1] == name:
@@ -161,7 +165,8 @@ class InstallerView(BrowserView):
 
         Note: not used yet.
         """
-        return self._get_profile(product_id, 'uninstall', strict=True)
+        return self._get_profile(
+            product_id, 'uninstall', strict=True, allow_hidden=True)
 
     def isProductInstallable(self, productname):
         warnings.warn('isProductInstallable is deprecated, '
