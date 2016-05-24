@@ -276,7 +276,6 @@ TODO in Plone 5.1
   are installable in standard Plone:
 
   - ATContentTypes  [https://github.com/plone/Products.ATContentTypes/pull/32]
-  - plone.app.openid
 
 - Additional idea: before uninstalling, check if the default profile
   is a dependency of another profile that is currently installed.
