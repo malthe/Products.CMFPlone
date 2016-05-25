@@ -1,6 +1,8 @@
 Notes about getting rid of CMFQuickInstallerTool
 ================================================
 
+This is meant as basis for an update to docs.plone.org.
+
 
 Changes needed in add-ons
 -------------------------
@@ -12,7 +14,7 @@ This is also true for core packages that have not been handled yet.
 Extensions/install.py
 ~~~~~~~~~~~~~~~~~~~~~
 
-When your add-on has an Extensions/install.py, you must switch to a GenericSetup profile.
+When your add-on has an ``Extensions/install.py``, you must switch to a GenericSetup profile.
 
 
 Uninstall
@@ -32,32 +34,56 @@ For an example, see https://github.com/plone/plone.app.multilingual/tree/master/
 portal_quickinstaller
 ~~~~~~~~~~~~~~~~~~~~~
 
-Old code::
+Old code:
+
+.. code-block:: python
 
     qi = getattr(self.context, 'portal_quickinstaller')
 
-or::
+or:
+
+.. code-block:: python
 
     qi = getToolByName(self.context, name='portal_quickinstaller')
 
-or::
+or:
+
+.. code-block:: python
 
     qi = getUtility(IQuickInstallerTool)
 
-New code::
+New code:
+
+.. code-block:: python
 
     from Products.CMFPlone.utils import get_installer
     qi = get_installer(self.context, self.request)
 
-or if you do not have a request::
+or if you do not have a request:
+
+.. code-block:: python
 
     qi = get_installer(self.context)
 
-Alternative code::
+Alternatively, since it is a browser view, you can get it like this:
+
+.. code-block:: python
 
     qi = getMultiAdapter((self.context, self.request), name='installer')
 
-If you need it in a page template::
+or with ``plone.api``:
+
+.. code-block:: python
+
+    from plone import api
+    api.content.get_view(
+        name='installer',
+        context=self.context,
+        request=self.request)
+
+If you need it in a page template:
+
+.. code-block:: python
 
     tal:define="qi context/@@installer"
 
@@ -73,26 +99,35 @@ Products namespace
 There used to be special handling for the Products namespace.
 Not anymore.
 
-Old code::
+Old code:
+
+.. code-block:: python
 
     qi.installProduct('CMFPlacefulWorkflow')
 
-New code::
+New code:
+
+.. code-block:: python
 
     qi.install_product('Products.CMFPlacefulWorkflow')
 
-TODO: check what happens with Products that register their profile in
-Python code instead of zcml.  It might be needed for that.
+.. @FWT: When a Product registers its profile in Python code instead of zcml, it might get registered without ``Products.`` in the name.
+   Do we still wish to support this?
+   My vote: no.
 
 
 isProductInstalled
 ~~~~~~~~~~~~~~~~~~
 
-Old code::
+Old code:
+
+.. code-block:: python
 
     qi.isProductInstalled(product_name)
 
-New code::
+New code:
+
+.. code-block:: python
 
     qi.is_product_installed(product_name)
 
@@ -100,16 +135,21 @@ New code::
 installProduct
 ~~~~~~~~~~~~~~
 
-Old code::
+Old code:
+
+.. code-block:: python
 
     qi.installProduct(product_name)
 
-New code::
+New code:
+
+.. code-block:: python
 
     qi.install_product(product_name)
 
 Note that no keyword arguments are accepted.
-We might keep ``omit_snapshots`` and ``blacklisted_steps`` if we really want.
+
+.. @FWT: We might keep ``omit_snapshots`` and ``blacklisted_steps`` if we really want.
 
 
 installProducts
@@ -119,23 +159,23 @@ This was removed.
 Iterate over a list of products instead.
 
 
-uninstallProduct
-~~~~~~~~~~~~~~~~
-
-Old code::
-
-    qi.uninstallProducts([product_name])
-
-New code::
-
-    qi.uninstall_product(product_name)
-
-
 uninstallProducts
 ~~~~~~~~~~~~~~~~~
 
-This was removed.
-Iterate over a list of products instead.
+Old code:
+
+.. code-block:: python
+
+    qi.uninstallProducts([product_name])
+
+New code:
+
+.. code-block:: python
+
+    qi.uninstall_product(product_name)
+
+Note that we only support passing one product name.
+If you want to install multiple products, you must call this method multiple times.
 
 
 reinstallProducts
@@ -149,11 +189,15 @@ You can uninstall and install if you want.
 getLatestUpgradeStep
 ~~~~~~~~~~~~~~~~~~~~
 
-Old code::
+Old code:
+
+.. code-block:: python
 
     qi.getLatestUpgradeStep(profile_id)
 
-New code::
+New code:
+
+.. code-block:: python
 
     qi.get_latest_upgrade_step(profile_id)
 
@@ -163,17 +207,23 @@ isDevelopmentMode
 
 This was a helper method that had got nothing to with the quick installer.
 
-Old code::
+Old code:
+
+.. code-block:: python
 
     qi = getToolByName(aq_inner(self.context), 'portal_quickinstaller')
     return qi.isDevelopmentMode()
 
-New code::
+New code:
+
+.. code-block:: python
 
     from Globals import DevelopmentMode
     return bool(DevelopmentMode)
 
-The new code works already (Plone 4.3, 5.0).
+.. note::
+
+    The new code works already (Plone 4.3, 5.0).
 
 
 All deprecated methods
@@ -193,6 +243,9 @@ but they do nothing:
 - notifyInstalled
 
 - reinstallProducts
+
+.. @FWT: I can imagine some use for listInstallableProducts and listInstalledProducts, so we could add them back.
+   But is_product_installable and is_product_installed can be enough.
 
 Some methods have been renamed.  The old method names are kept for
 backwards compatibility.  They do roughly the same as before, but
@@ -219,45 +272,47 @@ should switch to the new methods instead:
 INonInstallable
 ---------------
 
-There used to be an INonInstallable interface in CMFPlone (for hiding
-profiles) and one in CMFQuickInstallerTool (for hiding products).  In
-the new situation, these are combined in the one from CMFPlone.
+There used to be an INonInstallable interface in CMFPlone (for hiding profiles) and one in CMFQuickInstallerTool (for hiding products).
+In the new situation, these are combined in the one from CMFPlone.
 
 Sample usage:
 
-In configure.zcml::
+In configure.zcml:
 
-  <utility factory=".setuphandlers.NonInstallable"
-           name="your.package" />
+.. code-block:: xml
 
-In setuphandlers.py::
+    <utility factory=".setuphandlers.NonInstallable"
+        name="your.package" />
 
-  from Products.CMFPlone.interfaces import INonInstallable
-  from zope.interface import implements
+In setuphandlers.py:
 
-  class NonInstallable(object):
-      implements(INonInstallable)
+.. code-block:: python
 
-      def getNonInstallableProducts(self):
-          # This used to be CMFQuickInstallerTool.
-          # Make sure this package does not show up in the add-ons
-          # control panel:
-          return ['collective.hidden.package']
+    from Products.CMFPlone.interfaces import INonInstallable
+    from zope.interface import implements
 
-      def getNonInstallableProfiles(self):
-          # This already was in CMFPlone.
-          # Hide the base profile from your.package from the list
-          # shown at site creation.
-          return ['your.package:base']
+    class NonInstallable(object):
+        implements(INonInstallable)
 
-When you do not need them both, you can let the other return an empty
-list, or you can leave that method out completely.
+        def getNonInstallableProducts(self):
+            # This used to be CMFQuickInstallerTool.
+            # Make sure this package does not show up in the add-ons
+            # control panel:
+            return ['collective.hidden.package']
+
+        def getNonInstallableProfiles(self):
+            # This already was in CMFPlone.
+            # Hide the base profile from your.package from the list
+            # shown at site creation.
+            return ['your.package:base']
+
+When you do not need them both, you can let the other return an empty list, or you can leave that method out completely.
 
 
 Ideas for Plone 5.0
 -------------------
 
-Add ``get_installer`` function that return the old
+Add ``get_installer`` function that returns the old
 ``portal_quickinstaller`` with getToolByName.
 
 - Good: this way you can use ``get_installer`` in all Plone 5 versions
@@ -268,17 +323,25 @@ Add ``get_installer`` function that return the old
   whether you get the old tool or the new view.  If you try to use the
   new methods, they will fail because they do not exist.
 
+.. @FWT: do you have a preference.
+
 
 TODO in Plone 5.1
 -----------------
 
-- Make lots of uninstall profiles.  At least these ones, because they
-  are installable in standard Plone:
+- Make lots of uninstall profiles, for all core packages that are installable in standard Plone:
 
   - ATContentTypes  [https://github.com/plone/Products.ATContentTypes/pull/32]
+  - for all other packages the relevant pull request has been merged already
 
-- Additional idea: before uninstalling, check if the default profile
+
+Ideas in Plone 5.1
+------------------
+
+- Before uninstalling, check if the default profile
   is a dependency of another profile that is currently installed.
+  We could prevent uninstall, or warn.
+  But: someone might want to uninstall a package and install it immediately after, to solve some problem.
 
 - In uninstall_product we apply the uninstall profile and unmark the
   default profile.  We could do the last in an event handler, much
@@ -286,12 +349,14 @@ TODO in Plone 5.1
   that the default profile is also unmarked when someone manually
   applies the uninstall profile.
 
+.. @FWT: do we want this?  Possibly separate from this plip.
+
 
 TODO in Plone 6
 ---------------
 
 We do not want to break everything in Plone 5.x.
-So CMFQuickInstallerTool must remain,
+So CMFQuickInstallerTool must remain in Plone 5.x,
 even when not used in core.
 But in Plone 6 we intend to remove it.
 Let's not mention everything in this document,
@@ -306,3 +371,6 @@ In Products.CMFPlone:
 - Remove tests/testQuickInstallerTool.py
 
 - Remove QuickInstallerTool.py
+
+.. @FWT: do we agree to ship without Products.CMFQuickInstaller in Plone 6?
+   Such a decision can be revised later of course.
