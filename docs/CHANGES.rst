@@ -14,7 +14,8 @@ Breaking changes:
 
 New features:
 
-- *add item here*
+- Add sort_on field to search controlpanel.
+  [rodfersou]
 
 Bug fixes:
 
