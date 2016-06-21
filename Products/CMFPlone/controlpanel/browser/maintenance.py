@@ -40,18 +40,28 @@ class MaintenanceControlPanel(AutoExtensibleForm, form.EditForm):
             name=u'plone_portal_state')
         return portal_state.portal()
 
-    @button.buttonAndHandler(_(u'Pack database now'), name='pack')
-    def handle_pack_action(self, action):
-        data, errors = self.extractData()
-        if errors:
-            self.status = self.formErrorsMessage
-            return
+    def _check_allowed(self):
         CheckAuthenticator(self.request)
         if not self.available():
             self.status = _(
                 u'text_not_allowed_manage_server',
                 default=u'You are not allowed to manage the Zope server.'
             )
+            return
+
+        try:
+            return '"%s"' % getSecurityManager().getUser().getUserName()
+        except (ValueError, AttributeError):
+            return 'unknown user'
+
+    @button.buttonAndHandler(_(u'Pack database now'), name='pack')
+    def handle_pack_action(self, action):
+        data, errors = self.extractData()
+        if errors:
+            self.status = self.formErrorsMessage
+            return
+        user = self._check_allowed()
+        if not user:
             return
 
         days = data.get('days', None)
@@ -64,17 +74,9 @@ class MaintenanceControlPanel(AutoExtensibleForm, form.EditForm):
 
     @button.buttonAndHandler(_(u'Shut down'), name='shutdown')
     def handle_shutdown_action(self, action):
-        CheckAuthenticator(self.request)
-        if not self.available():
-            self.status = _(
-                u'text_not_allowed_manage_server',
-                default=u'You are not allowed to manage the Zope server.'
-            )
+        user = self._check_allowed()
+        if not user:
             return
-        try:
-            user = '"%s"' % getSecurityManager().getUser().getUserName()
-        except:
-            user = 'unknown user'
         logger.info("Shutdown requested by %s" % user)
         shutdown(0)
         # TODO: returning html has no effect in button handlers
@@ -85,18 +87,9 @@ class MaintenanceControlPanel(AutoExtensibleForm, form.EditForm):
 
     @button.buttonAndHandler(_(u'Restart'), name='restart')
     def handle_restart_action(self, action):
-        CheckAuthenticator(self.request)
-        if not self.available():
-            self.status = _(
-                u'text_not_allowed_manage_server',
-                default=u'You are not allowed to manage the Zope server.'
-            )
+        user = self._check_allowed()
+        if not user:
             return
-
-        try:
-            user = '"%s"' % getSecurityManager().getUser().getUserName()
-        except:
-            user = 'unknown user'
         logger.info("Restart requested by %s" % user)
         shutdown(1)
         url = self.request.get('URL')
