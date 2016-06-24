@@ -1021,6 +1021,14 @@ class ISearchSchema(Interface):
         default=160,
     )
 
+    sort_on = schema.Choice(
+        title=_(u'label_sort_on', default=u'Sort on'),
+        description=_(u"Sort the default search on this index"),
+        vocabulary='plone.app.vocabularies.SearchIndexes',
+        default=u'relevance',
+        required=True
+    )
+
 
 class ISecuritySchema(Interface):
 

@@ -30,6 +30,8 @@ New features:
 
 - Updated components directory, recompiled bundles.
   [thet]
+- Add sort_on field to search controlpanel.
+  [rodfersou]
 
 - Align bower components with newest mockup + documentation updates on mockup update process.
   [thet]
