@@ -10,6 +10,9 @@ Changelog
 
 Breaking changes:
 
+- Remove discontinued module ``grunt-debug-task`` from ``plone-compile-resources``.
+  [jensens]
+
 - Remove deprecated resource registrations for ``mockup-parser`` and ``mockup-registry`` from mockup-core.
   Use those from patternslib instead.
   [thet]
